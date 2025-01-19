@@ -1,66 +1,54 @@
 "use client"
 
 import Like from "@/app/Like"
-import { useOptimistic, useState, useTransition } from "react"
+import { useOptimistic, useTransition } from "react"
 
 interface State {
 	isLiked: boolean
 	likeCount: number
 }
 
-const Api = {
-	addLike: (): Promise<{ isLiked: boolean; likeCount: number }> => {
-		return fetch('/api/like', { method: 'POST' })
-			.then((response) => response.json())
-	},
-
-	removeLike: (): Promise<{ isLiked: boolean; likeCount: number }> => {
-		return fetch('/api/like', { method: 'DELETE' })
-			.then((response) => response.json())
-	}
-}
-
 export default function OptimisticLike({
-	initialIsLiked,
-	initialLikeCount,
+	isLiked,
+	likeCount,
+	addAction,
+	removeAction,
  }: { 
-	initialIsLiked: boolean
-	initialLikeCount: number
+	isLiked: boolean
+	likeCount: number
+	addAction: () => Promise<void>
+	removeAction: () => Promise<void>
  }) {
-	const [state, setState] = useState<State>({
-		isLiked: initialIsLiked,
-		likeCount: initialLikeCount
-	});
-
 	const [, startTransition] = useTransition();
 
-	const [optimisticState, addOptimisticValue] = useOptimistic<State, State['isLiked']>(state, (currentState, newIsLiked) => {
-		// ⚠️: setState로 서버 상태를 반영할 때 likeCount가 한번 더 증가하는 오류 방지
-		if (currentState.isLiked === newIsLiked) {
-			return currentState;
-		}
-
+	const [optimisticState, setOptimisticState] = useOptimistic<State, State>({
+		isLiked,
+		likeCount,
+	}, (currentState, newState) => {
 		return {
 			...currentState,
-			isLiked: newIsLiked,
-			likeCount: newIsLiked ? currentState.likeCount + 1 : currentState.likeCount - 1
+			...newState,
 		}
 	});
 
 	const addLike = async () => {
-		addOptimisticValue(true);
+		// 1. 낙관적으로 먼저 상태를 업데이트
+		setOptimisticState({
+			isLiked: true,
+			likeCount: optimisticState.likeCount + 1
+		});
 
-		const response = await Api.addLike();
-
-		setState(response);
+		// 2. API 요청
+		await addAction();
 	}
 
 	const removeLike = async () => {
-		addOptimisticValue(false);
+		setOptimisticState({
+			isLiked: false,
+			likeCount: optimisticState.likeCount - 1
+		});
 
-		const response = await Api.removeLike();
-
-		setState(response);
+		await removeAction();
 	}
 
 	const handleLike = () => {
