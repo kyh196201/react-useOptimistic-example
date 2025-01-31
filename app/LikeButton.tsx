@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import { useOptimistic, startTransition } from "react";
+import { useOptimistic, useTransition, useState, useEffect } from "react";
 
 interface State {
 	isLike: boolean
@@ -7,24 +7,63 @@ interface State {
 }
 
 export default function LikeButton() {
-	const [optimisticState, toggleOptimisticIsLike] = useOptimistic<State, State['isLike']>({ 
+	const [state, setState] = useState<State>({ 
 		isLike: false,
 		count: 0
-	}, (currentState, optimisticValue) => {
+	})
+
+	const [error, setError] = useState('')
+
+	const [optimisticState, toggleOptimisticIsLike] = useOptimistic<State, State['isLike']>(state, (currentState, optimisticValue) => {
 		return {
 			isLike: optimisticValue,
 			count: optimisticValue ? currentState.count + 1 : currentState.count - 1
 		}
 	})
 
+	const [isPending, startTransition] = useTransition()
+
+	useEffect(() => {
+		const fetchData = async () => {
+      const response = await fetch('/api/like', { method: 'GET' })
+      const data = (await response.json()) as { isLike: boolean; count: number }
+			setState(data)
+    }
+
+    fetchData();
+	}, [])
+
+	const addLike = async () => {
+		try {
+			const response = await fetch('/api/like', { method: 'POST' })
+			if (!response.ok) {
+				throw new Error('오류가 발생했습니다.')
+			}
+			const data = (await response.json()) as { isLike: boolean; count: number }
+			setState(data)
+		} catch (error) {
+			if (error instanceof Error) {
+				setError(error.message)
+			}
+		}
+	}
+
+	const removeLike = async () => {
+		const response = await fetch('/api/like', { method: 'DELETE' })
+		const data = (await response.json()) as { isLike: boolean; count: number }
+		setState(data)
+	}
+
 	const handleClick = () => {
 		startTransition(async () => {
-			toggleOptimisticIsLike(!optimisticState.isLike)
+			const nextIsLike = !optimisticState.isLike
+			toggleOptimisticIsLike(nextIsLike)
 
-			// 비동기 액션이 바로 종료되는 것을 방지하기 위해 2초 지연 추가
-			await new Promise<void>((resolve) => {
-				setTimeout(resolve, 2000)
-			})
+			if (nextIsLike === true) {
+				await addLike()
+			} else {
+				await removeLike()
+			}
 		})
 	}
 
@@ -34,6 +73,8 @@ export default function LikeButton() {
 		<button type="button" className="flex flex-col gap-2 justify-center items-center" onClick={handleClick}>
 			{heartIcon}
 			<span className="text-4xl text-center text-slate-600 font-semibold">{optimisticState.count}</span>
+			{isPending && <div className="text-2xl text-center text-slate-600">loading...</div>}
+			{error && <div className="text-2xl text-center text-red-600">{error}</div>}
 		</button>
 	)
 }

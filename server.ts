@@ -1,22 +1,22 @@
 import "server-only";
 
-let likeCount = 0;
-let isLiked = false;
+let count = 10;
+let isLike = false;
 
 export function getLikes() {
-  return { likeCount, isLiked };
+  return { count, isLike };
 }
 
 export function addLike() {
-	isLiked = true;
-	likeCount += 1;
+	isLike = true;
+	count += 1;
 
-	return { likeCount, isLiked };
+	return { count, isLike };
 }
 
 export function removeLike() {
-	isLiked = false;
-	likeCount -= 1;
+	isLike = false;
+	count -= 1;
 
-	return { likeCount, isLiked };
+	return { count, isLike };
 }
