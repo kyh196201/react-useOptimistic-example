@@ -37,7 +37,7 @@ export default function LikeButton() {
 		try {
 			const response = await fetch('/api/like', { method: 'POST' })
 			if (!response.ok) {
-				throw new Error('오류가 발생했습니다.')
+				throw new Error('Server Error...')
 			}
 			const data = (await response.json()) as { isLike: boolean; count: number }
 			setState(data)
@@ -74,7 +74,7 @@ export default function LikeButton() {
 			{heartIcon}
 			<span className="text-4xl text-center text-slate-600 font-semibold">{optimisticState.count}</span>
 			{isPending && <div className="text-2xl text-center text-slate-600">loading...</div>}
-			{error && <div className="text-2xl text-center text-red-600">{error}</div>}
+			{error && <div className="text-xl text-center text-red-600">{error}</div>}
 		</button>
 	)
 }
