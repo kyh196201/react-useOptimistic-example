@@ -1,6 +1,6 @@
 import "server-only";
 
-let likeCount = 10;
+let likeCount = 0;
 let isLiked = false;
 
 export function getLikes() {
