@@ -1,21 +1,23 @@
-import { useOptimistic, useTransition, useState, useEffect } from "react";
+import { useOptimistic, useTransition } from "react";
 import { Heart } from "lucide-react";
-import { getLike, addLike, removeLike } from "@/app/services";
 
 interface State {
 	isLike: boolean
 	count: number
 }
 
-export default function LikeButton() {
-	const [state, setState] = useState<State>({ 
-		isLike: false,
-		count: 0
-	})
+interface Props {
+	isLike: boolean
+	count: number
+	error: string
+	toggleAction: (isLike: boolean) => Promise<void>
+}
 
-	const [error, setError] = useState('')
-
-	const [optimisticState, toggleOptimisticIsLike] = useOptimistic<State, State['isLike']>(state, (currentState, optimisticValue) => {
+export default function LikeButton({ count, isLike, error, toggleAction }: Props) {
+	const [optimisticState, toggleOptimisticIsLike] = useOptimistic<State, State['isLike']>({
+		count,
+		isLike
+	}, (currentState, optimisticValue) => {
 		return {
 			isLike: optimisticValue,
 			count: optimisticValue ? currentState.count + 1 : currentState.count - 1
@@ -24,29 +26,12 @@ export default function LikeButton() {
 
 	const [isPending, startTransition] = useTransition()
 
-	useEffect(() => {
-		const fetchData = async () => {
-      const response = await getLike()
-			setState(response)
-    }
-
-    fetchData();
-	}, [])
-
 	const handleClick = () => {
 		startTransition(async () => {
 			const nextIsLike = !optimisticState.isLike
 			toggleOptimisticIsLike(nextIsLike)
 
-			try {
-				const response = nextIsLike ? await addLike() : await removeLike()
-				setState(response)
-				setError('')
-			} catch (error) {
-				if (error instanceof Error) {
-					setError(error.message)
-				}
-			}
+			await toggleAction(nextIsLike)
 		})
 	}
 
