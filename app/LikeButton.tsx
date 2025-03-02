@@ -1,5 +1,6 @@
-import { Heart } from "lucide-react";
 import { useOptimistic, useTransition, useState, useEffect } from "react";
+import { Heart } from "lucide-react";
+import { getLike, addLike, removeLike } from "@/app/services";
 
 interface State {
 	isLike: boolean
@@ -25,44 +26,26 @@ export default function LikeButton() {
 
 	useEffect(() => {
 		const fetchData = async () => {
-      const response = await fetch('/api/like', { method: 'GET' })
-      const data = (await response.json()) as { isLike: boolean; count: number }
-			setState(data)
+      const response = await getLike()
+			setState(response)
     }
 
     fetchData();
 	}, [])
-
-	const addLike = async () => {
-		try {
-			const response = await fetch('/api/like', { method: 'POST' })
-			if (!response.ok) {
-				throw new Error('Server Error...')
-			}
-			const data = (await response.json()) as { isLike: boolean; count: number }
-			setState(data)
-		} catch (error) {
-			if (error instanceof Error) {
-				setError(error.message)
-			}
-		}
-	}
-
-	const removeLike = async () => {
-		const response = await fetch('/api/like', { method: 'DELETE' })
-		const data = (await response.json()) as { isLike: boolean; count: number }
-		setState(data)
-	}
 
 	const handleClick = () => {
 		startTransition(async () => {
 			const nextIsLike = !optimisticState.isLike
 			toggleOptimisticIsLike(nextIsLike)
 
-			if (nextIsLike === true) {
-				await addLike()
-			} else {
-				await removeLike()
+			try {
+				const response = nextIsLike ? await addLike() : await removeLike()
+				setState(response)
+				setError('')
+			} catch (error) {
+				if (error instanceof Error) {
+					setError(error.message)
+				}
 			}
 		})
 	}
